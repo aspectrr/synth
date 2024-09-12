@@ -1,0 +1,30 @@
+{
+  "name": "happy-monstera",
+  "version": "1.0.0",
+  "description": "A way to easily install packages and code into your JavaScript projects that works seamlessly.",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/collinpfeifer/happy-monstera.git"
+  },
+  "keywords": [
+    "happy",
+    "monstera",
+    "happymonstera",
+    "happy-monstera"
+  ],
+  "author": "Collin Pfeifer",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/collinpfeifer/happy-monstera/issues"
+  },
+  "homepage": "https://github.com/collinpfeifer/happy-monstera#readme",
+  "dependencies": {
+    "uploadthing": "^6.13.3",
+    "yargs": "^17.7.2"
+  }
+}
