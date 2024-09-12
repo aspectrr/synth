@@ -59,7 +59,7 @@ const install = spawn(packageManager, ['install', 'uploadthing']);
 // then log out the URL to go to it and try it out.
 // if nextjs isnt installed then log out an error like "Sorry this only works on Next.JS at the moment!"
 let typescriptUsed = false;
-
+// i could also check the package.json file for typsecript as a dev dependency instead of iterating through the file list
 for(const file of files) {
   if(file === 'tsconfig.json') {
     typescriptUsed = true;
@@ -67,12 +67,16 @@ for(const file of files) {
 }
 
 for(const file of files) {
+
  if(fs.lstat(file).isDirectory() && (file === 'app' || file === 'pages')){
    // first get the name of the directory if it exists
    const routerName = file;
    // check to make sure this doesn't overwrite any other file that is in the directory and make sure that tsx or jsx files exist 
    // check if there is a tsconfig.json file in the root directory
    const fileName = `uploadthing.${typescriptUsed ? 't': 'j'}sx`;
+   const fileData = "";
+   fs.writeFile(fileName,)
+   break;
  } 
 }
 // I need to find out what package manager this project is using, npm, pnpm, yarn, bun, and install uploadthing with the respective packager manager
