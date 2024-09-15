@@ -4,6 +4,7 @@ import { hideBin } from 'yargs/helpers';
 import fs from 'node:fs';
 import readline from 'node:readline';
 import open from 'open';
+import { appendToTopofFile, wrapStringinFile, ensureAndAppendFile, ensureDirectoryExists, waitForValidInput } from '../utils';
 
 const options = yargs(hideBin(process.argv)).usage("Usage: -i <package>").option("i", {
   alias: "package", describe: "The package you want to install", type: "string", demandOption: true
@@ -15,6 +16,9 @@ const workingDir = process.cwd();
 console.log(workingDir);
 
 const files = fs.readdirSync(workingDir)
+
+// if src folder exists then need to just move everything into that directory, dont know how ill deal 
+// with that, maybe make have a src files variable to check for src and where I can access the real app
 
 let packageManager = "";
 
@@ -87,7 +91,6 @@ console.log("Secret Key: ", secretKey);
 // check for nextjs package and then check for the app and pages folder to look for a palce to add the pages components
 // then log out the URL to go to it and try it out.
 // if nextjs isnt installed then log out an error like "Sorry this only works on Next.JS at the moment!"
-let typescriptUsed = false;
 let tailwindUsed = false;
 // i could also check the package.json file for typsecript as a dev dependency instead of iterating through the file list
 for(const file of files) {
@@ -101,63 +104,14 @@ for(const file of files) {
   }
 }
 
-// Function to prompt the user for input and check the condition
-function waitForValidInput(prompt, condition) {
-  return new Promise((resolve, reject) => {
-    // Define the recursive function to ask for input
-    function askQuestion() {
-      rl.question(prompt, (input) => {
-        if (condition(input)) {
-          // If input matches the condition, resolve the promise
-          resolve(input);
-          rl.close(); // Close the readline interface
-        } else {
-          console.log('Invalid input, please try again.');
-          askQuestion(); // Ask again
-        }
-      });
-    }
-
-    askQuestion(); // Start asking the question
-  });
-}
-
-function ensureDirectoryExists(dirPath) {
-  try {
-    fs.mkdirSync(dirPath, { recursive: true });
-    console.log(`Directory created or already exists: ${dirPath}`);
-  } catch (error) {
-    console.error(`Error creating directory: ${error.message}`);
-  }
-}
-
-function ensureAndAppendFile(filePath, content) {
-  try {
-    // Check if the file exists
-    fs.accessSync(filePath);
-    console.log('File exists. Proceeding to write to it.');
-  } catch (error) {
-    if (error.code === 'ENOENT') {
-      console.log('File does not exist. It will be created.');
-    } else {
-      throw error; // Re-throw if it's not a "file does not exist" error
-    }
-  }
-
-  // Write to the file (creates it if it does not exist)
-  fs.appendFile(filePath, content, 'utf8', (err) => {
-  if (err) {
-    console.error('Error appending to file:', err.message);
-  } else {
-    console.log('Data appended successfully.');
-  }
-});
-}
-
 // add in .env the env variable 
 // make a function to make sure directories exist and that the file doesnt exist.
 // make the CLI open up the sign up screen, make them finish up on the browser and then take the .env variable back to the 
 // CLI or ask for it as input
+
+
+// for the tailwind config file, what if I figure out what it is exporting and wrap that in with the 
+// withUt function and also import it in the top of the file.
 
 // see if tailwind exists in the project, use that to decide which files it adds in 
 // wrap the tailwind file
@@ -174,14 +128,112 @@ for(const file of files) {
 
 ensureAndAppendFile('.env.local', `UPLOADTHING_SECRET=${secretKey}`)
 
+const ssrCondition = (input) => {
+  return ["y", "yes"].includes(input.toLowerCase()) || ["n", "no"].includes(input.toLowerCase());
+}
+
+const ssrUsed = await waitForValidInput("Would you like to impliment SSR for UploadThing? [y/n]",ssrCondition);
+
 if(routerName === 'app'){
   ensureDirectoryExists('app/api/uploadthing');
-  ensureAndAppendFile(`app/api/uploadthing/core.${typescriptUsed ? 't' : 'j'}sx`, "core.ts");
-  ensureAndAppendFile(`app/api/uploadthing/route.${typescriptUsed ? 't': 'j'}s`, "route.ts");
+  ensureAndAppendFile(`app/api/uploadthing/core.${typescriptUsed ? 't' : 'j'}sx`, `import { createUploadthing, type FileRouter } from "uploadthing/next";
+import { UploadThingError } from "uploadthing/server";
+
+const f = createUploadthing();
+
+const auth = (req: Request) => ({ id: "fakeId" }); // Fake auth function
+
+// FileRouter for your app, can contain multiple FileRoutes
+export const ourFileRouter = {
+  // Define as many FileRoutes as you like, each with a unique routeSlug
+  imageUploader: f({ image: { maxFileSize: "4MB" } })
+    // Set permissions and file types for this FileRoute
+    .middleware(async ({ req }) => {
+      // This code runs on your server before upload
+      const user = await auth(req);
+
+      // If you throw, the user will not be able to upload
+      if (!user) throw new UploadThingError("Unauthorized");
+
+      // Whatever is returned here is accessible in onUploadComplete as ${`metadata`}
+      return { userId: user.id };
+    })
+    .onUploadComplete(async ({ metadata, file }) => {
+      // This code RUNS ON YOUR SERVER after upload
+      console.log("Upload complete for userId:", metadata.userId);
+
+      console.log("file url", file.url);
+
+      // !!! Whatever is returned here is sent to the clientside ${`onClientUploadComplete`} callback
+      return { uploadedBy: metadata.userId };
+    }),
+} satisfies FileRouter;
+
+export type OurFileRouter = typeof ourFileRouter;
+`);
+  ensureAndAppendFile(`app/api/uploadthing/route.${typescriptUsed ? 't': 'j'}s`, `import { createRouteHandler } from "uploadthing/next";
+
+import { ourFileRouter } from "./core";
+
+// Export routes for Next App Router
+export const { GET, POST } = createRouteHandler({
+  router: ourFileRouter,
+
+  // Apply an (optional) custom config:
+  // config: { ... },
+});
+`);
   ensureDirectoryExists('utils');
-  ensureAndAppendFile(`utils/uploadthing.${typescriptUsed ? 't' : 'j'}s`, "utils");
+  ensureAndAppendFile(`utils/uploadthing.${typescriptUsed ? 't' : 'j'}s`, `import {
+  generateUploadButton,
+  generateUploadDropzone,
+} from "@uploadthing/react";
+
+import type { OurFileRouter } from "~/app/api/uploadthing/core";
+
+export const UploadButton = generateUploadButton<OurFileRouter>();
+export const UploadDropzone = generateUploadDropzone<OurFileRouter>();
+`);
   ensureDirectoryExists('app/example-uploader');
-  ensureAndAppendFile(`app/example-uploader/page.${typescriptUsed ? 't' : 'j'}sx`, '"use client"');
+  ensureAndAppendFile(`app/example-uploader/page.${typescriptUsed ? 't' : 'j'}sx`, `"use client";
+
+import { UploadButton } from "~/utils/uploadthing";
+
+export default function Home() {
+  return (
+    <main className="flex min-h-screen flex-col items-center justify-between p-24">
+      <UploadButton
+        endpoint="imageUploader"
+        onClientUploadComplete={(res) => {
+          // Do something with the response
+          console.log("Files: ", res);
+          alert("Upload Completed");
+        }}
+        onUploadError={(error: Error) => {
+          // Do something with the error.
+          alert(${`ERROR! ${error.message}`}});
+        }}
+      />
+    </main>
+  );
+}
+`);
+  appendToTopofFile(`app/tailwind.config.${typescriptUsed ? 't' : 'j'}s`, 'import { withUt } from "uploadthing/tw";')
+  wrapStringinFile(`app/tailwind.config.${typescriptUsed ? 't' : 'j'}s`, "withUt(", "config", ")");
+  if(ssrUsed){
+    appendToTopofFile(`app/layout.${typescriptUsed ? 't': 'j'}sx`,`import { NextSSRPlugin } from "@uploadthing/react/next-ssr-plugin";
+import { extractRouterConfig } from "uploadthing/server";
+import { ourFileRouter } from "~/app/api/uploadthing/core";`)
+    wrapStringinFile(`app/layout.${typescriptUsed ? 't': 'j'}sx`, `<NextSSRPlugin
+          /**
+           * The ${`extractRouterConfig`} will extract **only** the route configs
+           * from the router to prevent additional information from being
+           * leaked to the client. The data passed to the client is the same
+           * as if you were to fetch `/api/uploadthing` directly.
+           */
+          routerConfig={extractRouterConfig(ourFileRouter)}
+        />`,"{children}","")
+  }
 } else {
   ensureDirectoryExists('/server');
 }
