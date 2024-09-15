@@ -44,7 +44,7 @@ for (const file of files){
 // [x] 2. figure out what package manager is being used 
 // [x] 3. install uploadthing from the used package manager 
 // [x] 4. open up the browser and make the user go to uploadthing and get an API key and paste it into the CLI 
-// [] 5. figure out if the nextjs instance is using app/ or pages/
+// [x] 5. figure out if the nextjs instance is using app/ or pages/
 // [] 6. if the directories don't exist, add them and make sure the files don't exist before adding them in, if they do add a delimiter
 // [] 7. Check if they are using typescript
 // [] 8. see if the user is using tailwind, if so wrap the tailwind config with the wrapper
@@ -73,32 +73,53 @@ const install = spawn(packageManager, [packageManager === 'npm' ? 'install' : 'a
 //});
 open('https://uploadthing.com/sign-in');
 
-let secretKey = ""
-while(!secretKey.startsWith('sk_live_')){
-
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout
-})
+});
 
-rl.question("What's your uploadthing secret key?", key => {
-  if(!key.startsWith('sk_live_')){
-    console.log('Your secret key should start with sk_live_')
-  }
-  secretKey = key;
-  rl.close()
-})
+const condition = (input) => {
+  return input.startsWith('sk_live_');
 }
+
+const secretKey = await waitForValidInput("Please enter your UploadThing secret key: ", condition);
+console.log("Secret Key: ", secretKey);
 // check for nextjs package and then check for the app and pages folder to look for a palce to add the pages components
 // then log out the URL to go to it and try it out.
 // if nextjs isnt installed then log out an error like "Sorry this only works on Next.JS at the moment!"
 let typescriptUsed = false;
+let tailwindUsed = false;
 // i could also check the package.json file for typsecript as a dev dependency instead of iterating through the file list
 for(const file of files) {
   if(file === 'tsconfig.json') {
     typescriptUsed = true;
     console.log('Found TypeScript in your project')
   }
+  if(file === 'tailwind.config.ts' || file === 'tailwind.config.js'){
+    tailwindUsed = true;
+    console.log("Found Tailwind config in your project")
+  }
+}
+
+// Function to prompt the user for input and check the condition
+function waitForValidInput(prompt, condition) {
+  return new Promise((resolve, reject) => {
+    // Define the recursive function to ask for input
+    function askQuestion() {
+      rl.question(prompt, (input) => {
+        if (condition(input)) {
+          // If input matches the condition, resolve the promise
+          resolve(input);
+          rl.close(); // Close the readline interface
+        } else {
+          console.log('Invalid input, please try again.');
+          askQuestion(); // Ask again
+        }
+      });
+    }
+
+    askQuestion(); // Start asking the question
+  });
 }
 
 function ensureDirectoryExists(dirPath) {
@@ -141,23 +162,26 @@ function ensureAndAppendFile(filePath, content) {
 // see if tailwind exists in the project, use that to decide which files it adds in 
 // wrap the tailwind file
 // and then something to ask if the users wants to use the SSR plugin instead
-
-let envFileExists = false;
-
+let routerName
 for(const file of files) {
- if(fs.lstat(file).isDirectory() && (file === 'app' || file === 'pages')){
+ if(fs.lstatSync(file).isDirectory() && (file === 'app' || file === 'pages')){
    // first get the name of the directory if it exists
-   const routerName = file;
+   routerName = file;
    // check to make sure this doesn't overwrite any other file that is in the directory and make sure that tsx or jsx files exist 
    // check if there is a tsconfig.json file in the root directory
-   const fileName = `uploadthing.${typescriptUsed ? 't': 'j'}sx`;
  }
 }
 
 ensureAndAppendFile('.env.local', `UPLOADTHING_SECRET=${secretKey}`)
 
 if(routerName === 'app'){
-  ensureDirectoryExists('/app/api/uploadthing');
+  ensureDirectoryExists('app/api/uploadthing');
+  ensureAndAppendFile(`app/api/uploadthing/core.${typescriptUsed ? 't' : 'j'}sx`, "core.ts");
+  ensureAndAppendFile(`app/api/uploadthing/route.${typescriptUsed ? 't': 'j'}s`, "route.ts");
+  ensureDirectoryExists('utils');
+  ensureAndAppendFile(`utils/uploadthing.${typescriptUsed ? 't' : 'j'}s`, "utils");
+  ensureDirectoryExists('app/example-uploader');
+  ensureAndAppendFile(`app/example-uploader/page.${typescriptUsed ? 't' : 'j'}sx`, '"use client"');
 } else {
   ensureDirectoryExists('/server');
 }
