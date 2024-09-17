@@ -2,9 +2,8 @@ import { spawn } from 'node:child_process';
 import yargs from 'yargs/yargs';
 import { hideBin } from 'yargs/helpers';
 import fs from 'node:fs';
-import readline from 'node:readline';
 import open from 'open';
-import { appendToTopofFile, wrapStringinFile, ensureAndAppendFile, ensureDirectoryExists, waitForValidInput } from '../utils';
+import { appendToTopofFile, wrapStringinFile, ensureAndAppendFile, ensureDirectoryExists, waitForValidInput } from '../utils.js';
 
 const options = yargs(hideBin(process.argv)).usage("Usage: -i <package>").option("i", {
   alias: "package", describe: "The package you want to install", type: "string", demandOption: true
@@ -19,6 +18,8 @@ const files = fs.readdirSync(workingDir)
 
 // if src folder exists then need to just move everything into that directory, dont know how ill deal 
 // with that, maybe make have a src files variable to check for src and where I can access the real app
+
+
 
 let packageManager = "";
 
@@ -57,6 +58,7 @@ for (const file of files){
 // [] 11. open up the browser to the uploadthing page to try out
 // [] optional 12. make it super easy to remove too, like a remove function that removes everything that we did.
 
+// get the alias from the tsconfig/jsconfig file 
 
 console.log(`Found ${packageManager} as your package manager!`);
 
@@ -77,11 +79,6 @@ const install = spawn(packageManager, [packageManager === 'npm' ? 'install' : 'a
 //});
 open('https://uploadthing.com/sign-in');
 
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout
-});
-
 const condition = (input) => {
   return input.startsWith('sk_live_');
 }
@@ -92,11 +89,22 @@ console.log("Secret Key: ", secretKey);
 // then log out the URL to go to it and try it out.
 // if nextjs isnt installed then log out an error like "Sorry this only works on Next.JS at the moment!"
 let tailwindUsed = false;
+let typescriptUsed = false;
+let pathAlias = "@";
 // i could also check the package.json file for typsecript as a dev dependency instead of iterating through the file list
 for(const file of files) {
   if(file === 'tsconfig.json') {
     typescriptUsed = true;
-    console.log('Found TypeScript in your project')
+    console.log('Found TypeScript in your project');
+    fs.readFile(file,'utf8', (err,data) =>{
+      const jsonData = JSON.parse(data);
+      pathAlias = Object.keys(jsonData)[0].split("/")[0];
+    })
+  } else if(file === 'jsconfig.json'){
+    fs.readFile(file,'utf8', (err,data) =>{
+      const jsonData = JSON.parse(data);
+      pathAlias = Object.keys(jsonData)[0].split("/")[0];
+    })
   }
   if(file === 'tailwind.config.ts' || file === 'tailwind.config.js'){
     tailwindUsed = true;
@@ -136,7 +144,7 @@ const ssrUsed = await waitForValidInput("Would you like to impliment SSR for Upl
 
 if(routerName === 'app'){
   ensureDirectoryExists('app/api/uploadthing');
-  ensureAndAppendFile(`app/api/uploadthing/core.${typescriptUsed ? 't' : 'j'}sx`, `import { createUploadthing, type FileRouter } from "uploadthing/next";
+  ensureAndAppendFile(`app/api/uploadthing/core.${typescriptUsed ? 't' : 'j'}s`, `import { createUploadthing, type FileRouter } from "uploadthing/next";
 import { UploadThingError } from "uploadthing/server";
 
 const f = createUploadthing();
@@ -189,7 +197,7 @@ export const { GET, POST } = createRouteHandler({
   generateUploadDropzone,
 } from "@uploadthing/react";
 
-import type { OurFileRouter } from "~/app/api/uploadthing/core";
+import type { OurFileRouter } from "${pathAlias}/app/api/uploadthing/core";
 
 export const UploadButton = generateUploadButton<OurFileRouter>();
 export const UploadDropzone = generateUploadDropzone<OurFileRouter>();
@@ -197,7 +205,7 @@ export const UploadDropzone = generateUploadDropzone<OurFileRouter>();
   ensureDirectoryExists('app/example-uploader');
   ensureAndAppendFile(`app/example-uploader/page.${typescriptUsed ? 't' : 'j'}sx`, `"use client";
 
-import { UploadButton } from "~/utils/uploadthing";
+import { UploadButton } from "${pathAlias}/utils/uploadthing";
 
 export default function Home() {
   return (
@@ -211,25 +219,28 @@ export default function Home() {
         }}
         onUploadError={(error: Error) => {
           // Do something with the error.
-          alert(${`ERROR! ${error.message}`}});
+          alert("ERROR! " + error.message);
         }}
       />
     </main>
   );
 }
 `);
-  appendToTopofFile(`app/tailwind.config.${typescriptUsed ? 't' : 'j'}s`, 'import { withUt } from "uploadthing/tw";')
-  wrapStringinFile(`app/tailwind.config.${typescriptUsed ? 't' : 'j'}s`, "withUt(", "config", ")");
+if(tailwindUsed){
+  console.log("Tailwind file access: ", fs.accessSync(`tailwind.config.${typescriptUsed ? 't' : 'j'}s`, fs.constants.R_OK | fs.constants.W_OK))
+  appendToTopofFile(`tailwind.config.${typescriptUsed ? 't' : 'j'}s`, 'import { withUt } from "uploadthing/tw";\n')
+  wrapStringinFile(`tailwind.config.${typescriptUsed ? 't' : 'j'}s`, "withUt(", "config", ")");
+}
   if(ssrUsed){
     appendToTopofFile(`app/layout.${typescriptUsed ? 't': 'j'}sx`,`import { NextSSRPlugin } from "@uploadthing/react/next-ssr-plugin";
 import { extractRouterConfig } from "uploadthing/server";
-import { ourFileRouter } from "~/app/api/uploadthing/core";`)
+import { ourFileRouter } from "${pathAlias}/app/api/uploadthing/core";`)
     wrapStringinFile(`app/layout.${typescriptUsed ? 't': 'j'}sx`, `<NextSSRPlugin
           /**
            * The ${`extractRouterConfig`} will extract **only** the route configs
            * from the router to prevent additional information from being
            * leaked to the client. The data passed to the client is the same
-           * as if you were to fetch `/api/uploadthing` directly.
+           * as if you were to fetch ${`/api/uploadthing`} directly.
            */
           routerConfig={extractRouterConfig(ourFileRouter)}
         />`,"{children}","")
@@ -237,8 +248,6 @@ import { ourFileRouter } from "~/app/api/uploadthing/core";`)
 } else {
   ensureDirectoryExists('/server');
 }
-// I need to find out what package manager this project is using, npm, pnpm, yarn, bun, and install uploadthing with the respective packager manager
-// Then make sure it installed
-// I need to install uploadthing and then find out whether the next.js app is with pages or router, from there add in a page for uploadthing with some quick boilerplate. and that should be good
-// future, i would like to add more verbose colors, logs, and options into what projects it can be added into and ofc more packages that it can install
 
+//const dev = spawn(packageManager, ['run', 'dev']);
+//open("http://localhost:3000/example-uploader");
