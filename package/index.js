@@ -4,15 +4,17 @@ import { hideBin } from 'yargs/helpers';
 import fs from 'node:fs';
 import open from 'open';
 import { appendToTopofFile, wrapStringinFile, ensureAndAppendFile, ensureDirectoryExists, waitForValidInput } from '../utils.js';
+import colors from 'colors';
 
 const options = yargs(hideBin(process.argv)).usage("Usage: -i <package>").option("i", {
   alias: "package", describe: "The package you want to install", type: "string", demandOption: true
-}).argv;
+}).choices("i", ["uploadthing"]).help("help").argv;
 
-console.log("Hello" + options.package);
+console.log("Welcome to happy-monstera!".italic);
+console.log("You are installing " + options.package.italic.red)
 // Need to find the working directory where the package.json file
 const workingDir = process.cwd();
-console.log(workingDir);
+// console.log(workingDir);
 
 const files = fs.readdirSync(workingDir)
 
@@ -50,33 +52,35 @@ for (const file of files){
 // [x] 3. install uploadthing from the used package manager 
 // [x] 4. open up the browser and make the user go to uploadthing and get an API key and paste it into the CLI 
 // [x] 5. figure out if the nextjs instance is using app/ or pages/
-// [] 6. if the directories don't exist, add them and make sure the files don't exist before adding them in, if they do add a delimiter
-// [] 7. Check if they are using typescript
-// [] 8. see if the user is using tailwind, if so wrap the tailwind config with the wrapper
-// [] 9. ask if the user wants to use the SSR plugin for the upload button
+// [x] 6. if the directories don't exist, add them and make sure the files don't exist before adding them in, if they do add a delimiter
+// [x] 7. Check if they are using typescript
+// [x] 8. see if the user is using tailwind, if so wrap the tailwind config with the wrapper
+// [x] 9. ask if the user wants to use the SSR plugin for the upload button
 // [] 10. print that the CLI is done!
 // [] 11. open up the browser to the uploadthing page to try out
 // [] optional 12. make it super easy to remove too, like a remove function that removes everything that we did.
 
 // get the alias from the tsconfig/jsconfig file 
 
-console.log(`Found ${packageManager} as your package manager!`);
+console.log(`Found ${packageManager} as your package manager!`.bold);
 
 const install = spawn(packageManager, [packageManager === 'npm' ? 'install' : 'add', 'uploadthing','@uploadthing/react']);
 
 // figure out what package manager this person users
-//
-//install.stdout.on('data', (data) => {
-//  console.log(`stdout: ${data}`);
-//});
-//
-//install.stderr.on('data', (data) => {
-//  console.error(`stderr: ${data}`);
-//});
-//
-//install.on('close', (code) => {
-//  console.log(`child process exited with code ${code}`);
-//});
+
+install.stdout.on('data', (data) => {
+  console.log(`stdout: ${data}`);
+});
+
+install.stderr.on('data', (data) => {
+  console.error(`stderr: ${data}`);
+});
+
+install.on('close', (code) => {
+  console.log(`child process exited with code ${code}`);
+});
+
+console.log(`Opening ${options.package} sign page`.bold)
 open('https://uploadthing.com/sign-in');
 
 const condition = (input) => {
@@ -90,7 +94,7 @@ console.log("Secret Key: ", secretKey);
 // if nextjs isnt installed then log out an error like "Sorry this only works on Next.JS at the moment!"
 let tailwindUsed = false;
 let typescriptUsed = false;
-let pathAlias = "@";
+let pathAlias = "~";
 // i could also check the package.json file for typsecript as a dev dependency instead of iterating through the file list
 for(const file of files) {
   if(file === 'tsconfig.json') {
@@ -134,13 +138,13 @@ for(const file of files) {
  }
 }
 
-ensureAndAppendFile('.env.local', `UPLOADTHING_SECRET=${secretKey}`)
+ensureAndAppendFile('.env.local', `UPLOADTHING_SECRET=${secretKey}`);
 
 const ssrCondition = (input) => {
   return ["y", "yes"].includes(input.toLowerCase()) || ["n", "no"].includes(input.toLowerCase());
 }
 
-const ssrUsed = await waitForValidInput("Would you like to impliment SSR for UploadThing? [y/n]",ssrCondition);
+const ssrUsed = await waitForValidInput("Would you like to impliment SSR for UploadThing? [y/n]: ", ssrCondition);
 
 if(routerName === 'app'){
   ensureDirectoryExists('app/api/uploadthing');
@@ -227,11 +231,13 @@ export default function Home() {
 }
 `);
 if(tailwindUsed){
-  console.log("Tailwind file access: ", fs.accessSync(`tailwind.config.${typescriptUsed ? 't' : 'j'}s`, fs.constants.R_OK | fs.constants.W_OK))
   appendToTopofFile(`tailwind.config.${typescriptUsed ? 't' : 'j'}s`, 'import { withUt } from "uploadthing/tw";\n')
   wrapStringinFile(`tailwind.config.${typescriptUsed ? 't' : 'j'}s`, "withUt(", "config", ")");
+} else {
+  appendToTopofFile(`app/layout.${typescriptUsed ? 'j' : 't' }sx`,`import "@uploadthing/react/styles.css";
+`)
 }
-  if(ssrUsed){
+if(ssrUsed){
     appendToTopofFile(`app/layout.${typescriptUsed ? 't': 'j'}sx`,`import { NextSSRPlugin } from "@uploadthing/react/next-ssr-plugin";
 import { extractRouterConfig } from "uploadthing/server";
 import { ourFileRouter } from "${pathAlias}/app/api/uploadthing/core";`)
