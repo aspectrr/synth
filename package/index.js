@@ -3,9 +3,8 @@ import yargs from 'yargs/yargs';
 import { hideBin } from 'yargs/helpers';
 import fs from 'node:fs';
 import open from 'open';
-import { appendToTopofFile, wrapStringinFile, ensureAndAppendFile, ensureDirectoryExists, waitForValidInput } from '../utils.js';
+import { appendToTopofFile, wrapStringinFile, ensureAndAppendFile, ensureDirectoryExists, waitForValidInput } from 'utils.js';
 import colors from 'colors';
-import { type } from 'node:os';
 
 const options = yargs(hideBin(process.argv)).usage("Usage: -i <package>").option("i", {
   alias: "package", describe: "The package you want to install", type: "string", demandOption: true
