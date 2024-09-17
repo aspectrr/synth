@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import open from 'open';
 import { appendToTopofFile, wrapStringinFile, ensureAndAppendFile, ensureDirectoryExists, waitForValidInput } from '../utils.js';
 import colors from 'colors';
+import { type } from 'node:os';
 
 const options = yargs(hideBin(process.argv)).usage("Usage: -i <package>").option("i", {
   alias: "package", describe: "The package you want to install", type: "string", demandOption: true
@@ -56,10 +57,12 @@ for (const file of files){
 // [x] 7. Check if they are using typescript
 // [x] 8. see if the user is using tailwind, if so wrap the tailwind config with the wrapper
 // [x] 9. ask if the user wants to use the SSR plugin for the upload button
-// [] 10. print that the CLI is done!
-// [] 11. open up the browser to the uploadthing page to try out
+// [x] 10. print that the CLI is done!
+// [x] 11. open up the browser to the uploadthing page to try out
 // [] optional 12. make it super easy to remove too, like a remove function that removes everything that we did.
-
+// [] add in integration for src/ directory 
+// I'm thinking something like a abs path reference and adding it in front of /app or /server if it is used
+// also a way to stop people from using this manager if this isnt a nextjs project
 // get the alias from the tsconfig/jsconfig file 
 
 console.log(`Found ${packageManager} as your package manager!`.bold);
@@ -87,8 +90,8 @@ const condition = (input) => {
   return input.startsWith('sk_live_');
 }
 
-const secretKey = await waitForValidInput("Please enter your UploadThing secret key: ", condition);
-console.log("Secret Key: ", secretKey);
+const secretKey = await waitForValidInput("Please enter your ${options.package} secret key: ", condition);
+// console.log("Secret Key: ", secretKey);
 // check for nextjs package and then check for the app and pages folder to look for a palce to add the pages components
 // then log out the URL to go to it and try it out.
 // if nextjs isnt installed then log out an error like "Sorry this only works on Next.JS at the moment!"
@@ -252,8 +255,112 @@ import { ourFileRouter } from "${pathAlias}/app/api/uploadthing/core";`)
         />`,"{children}","")
   }
 } else {
-  ensureDirectoryExists('/server');
+  ensureDirectoryExists('server');
+  ensureAndAppendFile(`server/uploadthing.${typescriptUsed ? 't': 'j'}s`, `import type { NextApiRequest, NextApiResponse } from "next";
+
+import { createUploadthing, type FileRouter } from "uploadthing/next-legacy";
+import { UploadThingError } from "uploadthing/server";
+
+const f = createUploadthing();
+
+const auth = (req: NextApiRequest, res: NextApiResponse) => ({ id: "fakeId" }); // Fake auth function
+
+// FileRouter for your app, can contain multiple FileRoutes
+export const ourFileRouter = {
+  // Define as many FileRoutes as you like, each with a unique routeSlug
+  imageUploader: f({ image: { maxFileSize: "4MB" } })
+    // Set permissions and file types for this FileRoute
+    .middleware(async ({ req, res }) => {
+      // This code runs on your server before upload
+      const user = await auth(req, res);
+
+      // If you throw, the user will not be able to upload
+      if (!user) throw new UploadThingError("Unauthorized");
+
+      // Whatever is returned here is accessible in onUploadComplete as ${`metadata`}
+      return { userId: user.id };
+    })
+    .onUploadComplete(async ({ metadata, file }) => {
+      // This code RUNS ON YOUR SERVER after upload
+      console.log("Upload complete for userId:", metadata.userId);
+
+      console.log("file url", file.url);
+
+      // !!! Whatever is returned here is sent to the clientside ${`onClientUploadComplete`} callback
+      return { uploadedBy: metadata.userId };
+    }),
+} satisfies FileRouter;
+
+export type OurFileRouter = typeof ourFileRouter;
+`);
+  ensureDirectoryExists(`pages/api/uploadthing.${typescriptUsed ? 't': 'j'}s`, `import { createRouteHandler } from "uploadthing/next-legacy";
+
+import { ourFileRouter } from "${pathAlias}/server/uploadthing";
+
+export default createRouteHandler({
+  router: ourFileRouter,
+
+  // Apply an (optional) custom config:
+  // config: { ... },
+});
+`);
+  ensureDirectoryExists('utils');
+  ensureAndAppendFile(`utils/uploadthing.${typescriptUsed ? 't': 'j'}s`, `import {
+  generateUploadButton,
+  generateUploadDropzone,
+} from "@uploadthing/react";
+
+import type { OurFileRouter } from "${pathAlias}/server/uploadthing";
+
+export const UploadButton = generateUploadButton<OurFileRouter>();
+export const UploadDropzone = generateUploadDropzone<OurFileRouter>();
+`);
+if(tailwindUsed){
+  appendToTopofFile(`tailwind.config.${typescriptUsed ? 't' : 'j'}s`, 'import { withUt } from "uploadthing/tw";\n')
+  wrapStringinFile(`tailwind.config.${typescriptUsed ? 't' : 'j'}s`, "withUt(", "config", ")");
+} else {
+  appendToTopofFile(`app/layout.${typescriptUsed ? 'j' : 't' }sx`,`import "@uploadthing/react/styles.css";
+`)
+}
+ensureAndAppendFile(`pages/example-uploader.${typescriptUsed ? 't' : 'j'}sx`, `import { UploadButton } from "${pathAlias}/utils/uploadthing";
+
+export default function Home() {
+  return (
+    <main className="flex min-h-screen flex-col items-center justify-between p-24">
+      <UploadButton
+        endpoint="imageUploader"
+        onClientUploadComplete={(res) => {
+          // Do something with the response
+          console.log("Files: ", res);
+          alert("Upload Completed");
+        }}
+        onUploadError={(error: Error) => {
+          // Do something with the error.
+          alert("ERROR! " + error.message);
+        }}
+      />
+    </main>
+  );
+}
+`)
 }
 
-//const dev = spawn(packageManager, ['run', 'dev']);
-//open("http://localhost:3000/example-uploader");
+console.log("Installation is complete!".bold.green);
+
+const dev = spawn(packageManager, ['run', 'dev']);
+
+dev.stdout.on('data', (data) => {
+  console.log(`stdout: ${data}`);
+});
+
+dev.stderr.on('data', (data) => {
+  console.error(`stderr: ${data}`);
+});
+
+dev.on('close', (code) => {
+  console.log(`child process exited with code ${code}`);
+});
+
+const openBrowser = setTimeout(() => {
+  open("http://localhost:3000/example-uploader");
+}, 5000)
