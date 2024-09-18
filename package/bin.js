@@ -5,7 +5,7 @@ import yargs from 'yargs/yargs';
 import { hideBin } from 'yargs/helpers';
 import fs from 'node:fs';
 import open from 'open';
-import { appendToTopofFile, wrapStringinFile, ensureAndAppendFile, ensureDirectoryExists, waitForValidInput } from 'utils.js';
+import { appendToTopofFile, wrapStringinFile, ensureAndAppendFile, ensureDirectoryExists, waitForValidInput } from './utils.js';
 import colors from 'colors';
 
 const options = yargs(hideBin(process.argv)).usage("Usage: -i <package>").option("i", {
@@ -28,7 +28,7 @@ const files = fs.readdirSync(workingDir)
 let packageManager = "";
 
 for (const file of files){
-  console.log(file);
+  //console.log(file);
   switch(file) {
     case 'package-lock.json':
       packageManager = "npm";
@@ -71,27 +71,27 @@ console.log(`Found ${packageManager} as your package manager!`.bold);
 const install = spawn(packageManager, [packageManager === 'npm' ? 'install' : 'add', 'uploadthing','@uploadthing/react']);
 
 // figure out what package manager this person users
-
-install.stdout.on('data', (data) => {
-  console.log(`stdout: ${data}`);
-});
-
-install.stderr.on('data', (data) => {
-  console.error(`stderr: ${data}`);
-});
-
-install.on('close', (code) => {
-  console.log(`child process exited with code ${code}`);
-});
-
-console.log(`Opening ${options.package} sign page`.bold)
+//
+//install.stdout.on('data', (data) => {
+//  console.log(`stdout: ${data}`);
+//});
+//
+//install.stderr.on('data', (data) => {
+//  console.error(`stderr: ${data}`);
+//});
+//
+//install.on('close', (code) => {
+//  console.log(`child process exited with code ${code}`);
+//});
+//
+console.log("Opening ".bold + options.package.italic.red + " sign-in page".bold)
 open('https://uploadthing.com/sign-in');
 
 const condition = (input) => {
   return input.startsWith('sk_live_');
 }
 
-const secretKey = await waitForValidInput("Please enter your ${options.package} secret key: ", condition);
+const secretKey = await waitForValidInput(`Please enter your ${options.package} secret key: `, condition);
 // console.log("Secret Key: ", secretKey);
 // check for nextjs package and then check for the app and pages folder to look for a palce to add the pages components
 // then log out the URL to go to it and try it out.
@@ -106,14 +106,15 @@ for(const file of files) {
     console.log('Found TypeScript in your project');
     fs.readFile(file,'utf8', (err,data) =>{
       const jsonData = JSON.parse(data);
-      pathAlias = Object.keys(jsonData)[0].split("/")[0];
+      pathAlias = Object.keys(jsonData.compilerOptions.paths)[0].split('/')[0];
     })
   } else if(file === 'jsconfig.json'){
     fs.readFile(file,'utf8', (err,data) =>{
       const jsonData = JSON.parse(data);
-      pathAlias = Object.keys(jsonData)[0].split("/")[0];
+      pathAlias = Object.keys(jsonData.compilerOptions.paths)[0].split('/')[0];
     })
   }
+  console.log(pathAlias);
   if(file === 'tailwind.config.ts' || file === 'tailwind.config.js'){
     tailwindUsed = true;
     console.log("Found Tailwind config in your project")
@@ -244,7 +245,7 @@ if(tailwindUsed){
 if(ssrUsed){
     appendToTopofFile(`app/layout.${typescriptUsed ? 't': 'j'}sx`,`import { NextSSRPlugin } from "@uploadthing/react/next-ssr-plugin";
 import { extractRouterConfig } from "uploadthing/server";
-import { ourFileRouter } from "${pathAlias}/app/api/uploadthing/core";`)
+import { ourFileRouter } from "${pathAlias}/app/api/uploadthing/core";\n`)
     wrapStringinFile(`app/layout.${typescriptUsed ? 't': 'j'}sx`, `<NextSSRPlugin
           /**
            * The ${`extractRouterConfig`} will extract **only** the route configs
@@ -253,7 +254,7 @@ import { ourFileRouter } from "${pathAlias}/app/api/uploadthing/core";`)
            * as if you were to fetch ${`/api/uploadthing`} directly.
            */
           routerConfig={extractRouterConfig(ourFileRouter)}
-        />`,"{children}","")
+        />\n`,"{children}","")
   }
 } else {
   ensureDirectoryExists('server');
