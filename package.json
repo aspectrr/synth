@@ -1,8 +1,8 @@
 {
   "name": "happy-monstera",
-  "version": "1.0.0",
-  "description": "A way to easily install packages and code into your JavaScript projects that works seamlessly.",
-  "main": "index.js",
+  "version": "1.0.1",
+  "description": "",
+  "bin": "./package/bin.js",
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -26,7 +26,6 @@
   "dependencies": {
     "colors": "^1.4.0",
     "open": "^10.1.0",
-    "uploadthing": "^6.13.3",
     "yargs": "^17.7.2"
   }
 }
