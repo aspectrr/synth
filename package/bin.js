@@ -352,11 +352,11 @@ console.log("Installation is complete!".bold.green);
 const dev = spawn(packageManager, ['run', 'dev']);
 
 dev.stdout.on('data', (data) => {
-  console.log(data);
+  console.log(data.toString());
 });
 
 dev.stderr.on('data', (data) => {
-  console.error(data);
+  console.error(data.toString());
 });
 
 setTimeout(() => {
