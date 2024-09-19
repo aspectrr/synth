@@ -88,10 +88,10 @@ console.log("Opening ".bold + options.package.italic.red + " sign-in page".bold)
 open('https://uploadthing.com/sign-in');
 
 const condition = (input) => {
-  return input.startsWith('sk_live_');
+  return input.startsWith('UPLOADTHING_TOKEN');
 }
 
-const secretKey = await waitForValidInput(`Please enter your ${options.package} secret key: `, condition);
+const secretKey = await waitForValidInput(`Please enter your full ${options.package} env variable, it should start with UPLOADTHING_TOKEN=... `, condition);
 // console.log("Secret Key: ", secretKey);
 // check for nextjs package and then check for the app and pages folder to look for a palce to add the pages components
 // then log out the URL to go to it and try it out.
@@ -143,7 +143,7 @@ for(const file of files) {
  }
 }
 
-ensureAndAppendFile('.env.local', `UPLOADTHING_SECRET=${secretKey}`);
+ensureAndAppendFile('.env.local', secretKey);
 
 const ssrCondition = (input) => {
   return ["y", "yes"].includes(input.toLowerCase()) || ["n", "no"].includes(input.toLowerCase());
