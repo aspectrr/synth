@@ -114,7 +114,7 @@ for(const file of files) {
       pathAlias = Object.keys(jsonData.compilerOptions.paths)[0].split('/')[0];
     })
   }
-  console.log(pathAlias);
+  //console.log(pathAlias);
   if(file === 'tailwind.config.ts' || file === 'tailwind.config.js'){
     tailwindUsed = true;
     console.log("Found Tailwind config in your project")
@@ -352,17 +352,13 @@ console.log("Installation is complete!".bold.green);
 const dev = spawn(packageManager, ['run', 'dev']);
 
 dev.stdout.on('data', (data) => {
-  console.log(`stdout: ${data}`);
+  console.log(data);
 });
 
 dev.stderr.on('data', (data) => {
-  console.error(`stderr: ${data}`);
+  console.error(data);
 });
 
-dev.on('close', (code) => {
-  console.log(`child process exited with code ${code}`);
-});
-
-const openBrowser = setTimeout(() => {
+setTimeout(() => {
   open("http://localhost:3000/example-uploader");
 }, 5000)
