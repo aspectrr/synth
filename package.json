@@ -2,7 +2,9 @@
   "name": "happy-monstera",
   "version": "1.0.3",
   "description": "",
-  "bin": "./package/bin.js",
+  "bin": {
+    "happy-monstera": "package/bin.js"
+  },
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
