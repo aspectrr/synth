@@ -1,6 +1,6 @@
 {
   "name": "happy-monstera",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "",
   "bin": "./package/bin.js",
   "type": "module",
