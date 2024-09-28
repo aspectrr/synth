@@ -1,10 +1,5 @@
 import fs from 'node:fs';
 import readline from 'node:readline';
-//
-//const rl = readline.createInterface({
-//  input: process.stdin,
-//  output: process.stdout
-//})
 
 export function appendToTopofFile(file, string) {
   console.log("Appending to ", file);
@@ -12,7 +7,7 @@ export function appendToTopofFile(file, string) {
   // Read the existing file contents asynchronously
   fs.readFile(file, 'utf8', (err, data) => {
     if (err) {
-      console.error('Error reading file:', err);
+  console.error('Error reading file:', err);
       return;
     }
 
@@ -20,7 +15,7 @@ export function appendToTopofFile(file, string) {
     const updatedContent = string + data;
 
     // Write the updated content back to the file asynchronously
-    fs.writeFile(file, updatedContent, 'utf8', (err) => {
+  fs.writeFile(file, updatedContent, 'utf8', (err) => {
       if (err) {
         console.error('Error writing file:', err);
         return;
@@ -112,5 +107,59 @@ export function waitForValidInput(prompt, condition) {
 
     askQuestion(); // Start asking the question
   });
+}
+
+export function installPackage(packageName){
+  // Need to find the working directory where the package.json file
+const workingDir = process.cwd();
+// console.log(workingDir);
+
+const files = fs.readdirSync(workingDir)
+
+// if src folder exists then need to just move everything into that directory, dont know how ill deal 
+// with that, maybe make have a src files variable to check for src and where I can access the real app
+
+
+
+let packageManager = "";
+
+for (const file of files){
+  //console.log(file);
+  switch(file) {
+    case 'package-lock.json':
+      packageManager = "npm";
+      break;
+    case 'pnpm-lock.yaml':
+      packageManager = "pnpm";
+      break;
+    case 'bun.lockb':
+      packageManager = 'bun';
+      break;
+    case 'yarn.lock':
+      packageManager = "yarn";
+      break;
+    default:
+      packageManager = "npm";
+      break;
+  }
+}
+
+console.log(`Found ${packageManager} as your package manager!`.bold);
+
+const install = spawn(packageManager, [packageManager === 'npm' ? 'install' : 'add', 'uploadthing','@uploadthing/react']);
+// figure out what package manager this person users
+//
+//install.stdout.on('data', (data) => {
+//  console.log(`stdout: ${data}`);
+//});
+//
+//install.stderr.on('data', (data) => {
+//  console.error(`stderr: ${data}`);
+//});
+//
+//install.on('close', (code) => {
+//  console.log(`child process exited with code ${code}`);
+//});
+//
 }
 

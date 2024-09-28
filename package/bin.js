@@ -8,9 +8,13 @@ import open from 'open';
 import { appendToTopofFile, wrapStringinFile, ensureAndAppendFile, ensureDirectoryExists, waitForValidInput } from './utils.js';
 import colors from 'colors';
 
-const options = yargs(hideBin(process.argv)).usage("Usage: -i <package>").option("i", {
+const options = yargs(hideBin(process.argv)).command("add") 
+  .usage("Usage: -i <package>").option("i", {
   alias: "package", describe: "The package you want to install", type: "string", demandOption: true
-}).choices("i", ["uploadthing"]).help("help").argv;
+}).choices("i", ["uploadthing"])
+  .usage("Usage: -l").option("l", {
+  alias: "list", describe: "List all available packages", type: "string", demandOption: false
+}).help("help").argv;
 
 console.log("Welcome to happy-monstera!".italic);
 console.log("You are installing " + options.package.italic.red)
@@ -106,7 +110,7 @@ for(const file of files) {
     console.log('Found TypeScript in your project');
     fs.readFile(file,'utf8', (err,data) =>{
       const jsonData = JSON.parse(data);
-      pathAlias = Object.keys(jsonData.compilerOptions.paths)[0].split('/')[0];
+  pathAlias = Object.keys(jsonData.compilerOptions.paths)[0].split('/')[0];
     })
   } else if(file === 'jsconfig.json'){
     fs.readFile(file,'utf8', (err,data) =>{
