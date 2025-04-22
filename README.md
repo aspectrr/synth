@@ -1,4 +1,4 @@
-# Easy Install
+# Synth.cli
 
 ## A better way to install packages faster and easier.
 
