@@ -1,33 +1,11 @@
 {
-  "name": "happy-monstera",
-  "version": "1.0.4",
-  "description": "",
-  "bin": {
-    "happy-monstera": "package/bin.js"
-  },
+  "name": "synth-cli",
+  "module": "index.ts",
   "type": "module",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "devDependencies": {
+    "@types/bun": "latest"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/collinpfeifer/happy-monstera.git"
-  },
-  "keywords": [
-    "happy",
-    "monstera",
-    "happymonstera",
-    "happy-monstera"
-  ],
-  "author": "Collin Pfeifer",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/collinpfeifer/happy-monstera/issues"
-  },
-  "homepage": "https://github.com/collinpfeifer/happy-monstera#readme",
-  "dependencies": {
-    "colors": "^1.4.0",
-    "open": "^10.1.0",
-    "yargs": "^17.7.2"
+  "peerDependencies": {
+    "typescript": "^5"
   }
 }

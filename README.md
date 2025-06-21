@@ -1,5 +1,15 @@
-# Synth
+# synth-cli
 
-## A better way to install packages faster and easier.
+To install dependencies:
 
-Sign up, integrate, test and deploy all from one CLI tool
+```bash
+bun install
+```
+
+To run:
+
+```bash
+bun run index.ts
+```
+
+This project was created using `bun init` in bun v1.2.9. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
