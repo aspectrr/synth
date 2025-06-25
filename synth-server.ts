@@ -1,12 +1,17 @@
-import bun from "bun";
+import { Elysia, t } from "elysia";
+import { swagger } from "@elysiajs/swagger";
+import { findAvailablePort } from "./utils/localserver";
 
-bun.serve({
-  routes: {
-    "/login": {
-      POST: async (req) => {
-        const body = await req.json();
-        return new Response("Hello Login");
-      },
-    },
-  },
-});
+const app = new Elysia()
+  .use(swagger())
+  .get("/health", () => "OK")
+  .post("/synth-callback", ({ body }) => {
+    console.log("Synth callback received");
+    console.log(body);
+    return { status: "success" };
+  })
+  .listen(await findAvailablePort());
+
+console.log(
+  `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`,
+);
