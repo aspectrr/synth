@@ -1,16 +1,21 @@
-import { Elysia, t } from "elysia";
+import { Elysia } from "elysia";
 import { swagger } from "@elysiajs/swagger";
-import { findAvailablePort } from "./utils/localserver";
+import { storeUserData } from "./utils/storeuserdata";
 
 const app = new Elysia()
   .use(swagger())
-  .get("/health", () => "OK")
-  .post("/synth-callback", ({ body }) => {
+  .post("/", ({ body }) => {
     console.log("Synth callback received");
     console.log(body);
+    storeUserData(body);
     return { status: "success" };
   })
-  .listen(await findAvailablePort());
+  .get("/health", () => "OK")
+  .listen(0);
+
+console.log(
+  `Opening website at: https://example.com/login?synth-callback=http://localhost:${app.server?.port}`,
+);
 
 console.log(
   `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`,

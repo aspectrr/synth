@@ -1,7 +1,10 @@
-import { loadUserConfig } from "../synth-sdk/src/loadConfig"
+import { loadSynthConfig } from "../synth-sdk/src/loadConfig";
 
-export function storeUserData(userData: any) {
-  const config = await loadUserConfig()
+export async function storeUserData(userData: any) {
+  const config = await loadSynthConfig();
   // Store user data in a database or file system
-  const file =
+  const file = config.configPath || "";
+  console.log(file, userData);
 }
+
+export function loadUserData() {}

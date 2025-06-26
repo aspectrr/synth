@@ -2,7 +2,7 @@ import { pathToFileURL } from "url";
 import path from "path";
 import type { SynthConfig } from "./schema";
 
-export async function loadUserConfig(
+export async function loadSynthConfig(
   configPath = "./synth.config.ts",
 ): Promise<SynthConfig> {
   const abs = path.resolve(process.cwd(), configPath);
